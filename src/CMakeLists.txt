@@ -37,4 +37,7 @@ if(BUILD_ESPEAK_NG_EXE)
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/espeak DESTINATION bin)
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/speak DESTINATION bin)
   endif()
+
+else ()
+  install(DIRECTORY include/espeak include/espeak-ng TYPE INCLUDE)
 endif()
