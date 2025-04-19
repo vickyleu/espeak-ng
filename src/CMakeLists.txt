@@ -1,7 +1,8 @@
 add_library(espeak-include INTERFACE)
-target_include_directories(espeak-include INTERFACE include include/compat)
-
 add_subdirectory(ucd-tools)
+target_include_directories(espeak-include INTERFACE include include/compat
+        ucd-tools/src/include  # 关键路径
+)
 if(USE_SPEECHPLAYER)
   add_subdirectory(speechPlayer)
 endif()
@@ -10,7 +11,7 @@ add_subdirectory(libespeak-ng)
 if(BUILD_ESPEAK_NG_EXE)
   add_executable(espeak-ng-bin espeak-ng.c)
   target_link_libraries(
-    espeak-ng-bin PRIVATE espeak-ng espeak-ng-config ucd-tools
+    espeak-ng-bin PRIVATE espeak-ng espeak-ng-config
   )
   if (MINGW)
     target_link_options(espeak-ng-bin PRIVATE "-static-libstdc++" "-static")
