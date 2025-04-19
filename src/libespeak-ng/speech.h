@@ -20,7 +20,7 @@
 #ifndef ESPEAK_NG_SPEECH_H
 #define ESPEAK_NG_SPEECH_H
 
-#include <endian.h>               // for BYTE_ORDER, BIG_ENDIAN
+#include <espeak-ng/compat/compat_endian.h>               // for BYTE_ORDER, BIG_ENDIAN
 #include <espeak-ng/espeak_ng.h>
 
 #if defined(__has_feature)
