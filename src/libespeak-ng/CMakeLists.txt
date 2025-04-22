@@ -140,9 +140,6 @@ if (NOT BUILD_SHARED_LIBS)
           COMMENT "正在合并 espeak-ng 和 ucd 库"
   )
 
-  # 确保其他目标在 merge_libraries 之后构建
-  add_dependencies(test_piper_phonemize merge_libraries)
-  add_dependencies(piper_phonemize_exe merge_libraries)
 else()
   target_link_libraries(espeak-ng PRIVATE ucd)
 endif()
