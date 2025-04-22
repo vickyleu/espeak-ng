@@ -106,18 +106,29 @@ get_filename_component( UCD_LIB_PATH ${UCD_DIR} ABSOLUTE)
 MESSAGE("UCD_LIB_PATH===${UCD_LIB_PATH}")
 
 if (NOT BUILD_SHARED_LIBS)
-  # 解包 libucd.a，列出所有 .o
   set_target_properties(ucd PROPERTIES
           IMPORTED_LOCATION "${UCD_LIB_PATH}/libucd.a"
   )
-  # CMake ≥3.24 推荐：
-  target_link_libraries(espeak-ng PRIVATE
-          $<LINK_LIBRARY:WHOLE_ARCHIVE,ucd>
-          $<LINK_LIBRARY:NO_WHOLE_ARCHIVE>
-  )
-elseif ()
-  target_link_libraries(espeak-ng PRIVATE ucd )
-endif ()
+
+  if(CMAKE_VERSION VERSION_LESS 3.24)
+    # 旧版本 CMake 的方式
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+      # GCC/Clang 语法
+      target_link_libraries(espeak-ng PRIVATE
+              -Wl,--whole-archive ${UCD_LIB_PATH}/libucd.a -Wl,--no-whole-archive)
+    elseif(MSVC)
+      # MSVC 语法
+      target_link_libraries(espeak-ng PRIVATE /WHOLEARCHIVE:ucd)
+    endif()
+  else()
+    # 现代 CMake 3.24+ 语法
+    target_link_libraries(espeak-ng PRIVATE
+            $<LINK_LIBRARY:WHOLE_ARCHIVE,ucd>
+            $<LINK_LIBRARY:RESOLVE_ONLY>)
+  endif()
+else()
+  target_link_libraries(espeak-ng PRIVATE ucd)
+endif()
 
 if (NOT MSVC)
   target_link_libraries(espeak-ng PRIVATE m)
