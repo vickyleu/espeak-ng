@@ -113,21 +113,26 @@ if (NOT BUILD_SHARED_LIBS)
           COMMAND ${CMAKE_COMMAND} -E echo "espeak-ng 库位置: $<TARGET_FILE:espeak-ng>"
           COMMAND ${CMAKE_COMMAND} -E echo "ucd 库位置: ${UCD_LIB_PATH}/libucd.a"
 
-          # 创建临时目录
-          COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/temp_obj
+          # 创建一个shell脚本来处理合并
+          COMMAND ${CMAKE_COMMAND} -E echo "#!/bin/bash" > ${CMAKE_CURRENT_BINARY_DIR}/merge_lib.sh
+          COMMAND ${CMAKE_COMMAND} -E echo "set -e" >> ${CMAKE_CURRENT_BINARY_DIR}/merge_lib.sh
+          COMMAND ${CMAKE_COMMAND} -E echo "set -x" >> ${CMAKE_CURRENT_BINARY_DIR}/merge_lib.sh
+          COMMAND ${CMAKE_COMMAND} -E echo "WORKDIR=${CMAKE_CURRENT_BINARY_DIR}/temp_obj" >> ${CMAKE_CURRENT_BINARY_DIR}/merge_lib.sh
+          COMMAND ${CMAKE_COMMAND} -E echo "rm -rf \$WORKDIR" >> ${CMAKE_CURRENT_BINARY_DIR}/merge_lib.sh
+          COMMAND ${CMAKE_COMMAND} -E echo "mkdir -p \$WORKDIR" >> ${CMAKE_CURRENT_BINARY_DIR}/merge_lib.sh
+          COMMAND ${CMAKE_COMMAND} -E echo "cd \$WORKDIR" >> ${CMAKE_CURRENT_BINARY_DIR}/merge_lib.sh
+          COMMAND ${CMAKE_COMMAND} -E echo "${CMAKE_AR} x $<TARGET_FILE:espeak-ng>" >> ${CMAKE_CURRENT_BINARY_DIR}/merge_lib.sh
+          COMMAND ${CMAKE_COMMAND} -E echo "${CMAKE_AR} x ${UCD_LIB_PATH}/libucd.a" >> ${CMAKE_CURRENT_BINARY_DIR}/merge_lib.sh
+          COMMAND ${CMAKE_COMMAND} -E echo "FILES=\$(ls *.o)" >> ${CMAKE_CURRENT_BINARY_DIR}/merge_lib.sh
+          COMMAND ${CMAKE_COMMAND} -E echo "if [ -z \"\$FILES\" ]; then echo \"No object files found\"; exit 1; fi" >> ${CMAKE_CURRENT_BINARY_DIR}/merge_lib.sh
+          COMMAND ${CMAKE_COMMAND} -E echo "${CMAKE_AR} cr $<TARGET_FILE:espeak-ng>.new \$FILES" >> ${CMAKE_CURRENT_BINARY_DIR}/merge_lib.sh
+          COMMAND ${CMAKE_COMMAND} -E echo "${CMAKE_RANLIB} $<TARGET_FILE:espeak-ng>.new" >> ${CMAKE_CURRENT_BINARY_DIR}/merge_lib.sh
+          COMMAND ${CMAKE_COMMAND} -E echo "mv $<TARGET_FILE:espeak-ng>.new $<TARGET_FILE:espeak-ng>" >> ${CMAKE_CURRENT_BINARY_DIR}/merge_lib.sh
+          COMMAND ${CMAKE_COMMAND} -E echo "rm -rf \$WORKDIR" >> ${CMAKE_CURRENT_BINARY_DIR}/merge_lib.sh
 
-          # 解压库文件
-          COMMAND cd ${CMAKE_CURRENT_BINARY_DIR}/temp_obj && ${CMAKE_AR} x $<TARGET_FILE:espeak-ng>
-          COMMAND cd ${CMAKE_CURRENT_BINARY_DIR}/temp_obj && ${CMAKE_AR} x ${UCD_LIB_PATH}/libucd.a
-
-          # 修改这一行，使用 cr 参数（不使用 s）
-          COMMAND cd ${CMAKE_CURRENT_BINARY_DIR}/temp_obj && ${CMAKE_AR} cr $<TARGET_FILE:espeak-ng>.new *.o
-          # 单独执行 ranlib
-          COMMAND ${CMAKE_RANLIB} $<TARGET_FILE:espeak-ng>.new
-          COMMAND ${CMAKE_COMMAND} -E rename $<TARGET_FILE:espeak-ng>.new $<TARGET_FILE:espeak-ng>
-
-          # 清理
-          COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_CURRENT_BINARY_DIR}/temp_obj
+          # 执行脚本
+          COMMAND chmod +x ${CMAKE_CURRENT_BINARY_DIR}/merge_lib.sh
+          COMMAND ${CMAKE_CURRENT_BINARY_DIR}/merge_lib.sh
 
           COMMENT "将 libucd.a 合并到 libespeak-ng.a"
           VERBATIM
