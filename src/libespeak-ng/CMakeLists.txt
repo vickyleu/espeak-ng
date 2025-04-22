@@ -106,11 +106,17 @@ get_filename_component( UCD_LIB_PATH ${UCD_DIR} ABSOLUTE)
 MESSAGE("UCD_LIB_PATH===${UCD_LIB_PATH}")
 
 if (NOT BUILD_SHARED_LIBS)
+  # 解包 libucd.a，列出所有 .o
+  execute_process(
+          COMMAND ${CMAKE_AR} t ${UCD_LIB_PATH}/libucd.a
+          OUTPUT_VARIABLE ucd_list
+  )
+  string(REPLACE "\n" ";" ucd_list ${ucd_list})
+
   add_library(ucd_objs OBJECT IMPORTED)
   set_target_properties(ucd_objs PROPERTIES
-          IMPORTED_LOCATION "${UCD_LIB_PATH}/libucd.a"
+          IMPORTED_OBJECTS "${ucd_list}"
   )
-  # 把 ucd_objs 的 .o 并入 espeak-ng
   target_sources(espeak-ng PRIVATE $<TARGET_OBJECTS:ucd_objs>)
 endif ()
 
