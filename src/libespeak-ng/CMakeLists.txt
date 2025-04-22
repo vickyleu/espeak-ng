@@ -106,18 +106,28 @@ get_filename_component( UCD_LIB_PATH ${UCD_DIR} ABSOLUTE)
 MESSAGE("UCD_LIB_PATH===${UCD_LIB_PATH}")
 
 if (NOT BUILD_SHARED_LIBS)
-  # 解包 libucd.a，列出所有 .o
-  execute_process(
-          COMMAND ${CMAKE_AR} t ${UCD_LIB_PATH}/libucd.a
-          OUTPUT_VARIABLE ucd_list
+  # espeak-ng 已经完成静态库 libespeak-ng.a 的生成
+  add_custom_command(TARGET espeak-ng
+          POST_BUILD
+          COMMAND ${CMAKE_AR} -M < "${CMAKE_CURRENT_BINARY_DIR}/bundle.scr"
+          WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   )
-  string(REPLACE "\n" ";" ucd_list ${ucd_list})
 
-  add_library(ucd_objs OBJECT IMPORTED)
-  set_target_properties(ucd_objs PROPERTIES
-          IMPORTED_OBJECTS "${ucd_list}"
+  # 生成 bundle.scr 脚本
+  file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/bundle.scr"
+          "CREATE libespeak-ng-full.a\n"
+          "ADDMOD libespeak-ng.a\n"
+          "ADDMOD ${UCD_LIB_PATH}/libucd.a\n"
+          "SAVE\n"
+          "END\n"
   )
-  target_sources(espeak-ng PRIVATE $<TARGET_OBJECTS:ucd_objs>)
+  # 替换输出静态库为合并后的版本
+  add_custom_command(TARGET espeak-ng
+          POST_BUILD
+          COMMAND ${CMAKE_COMMAND} -E copy
+          "${CMAKE_CURRENT_BINARY_DIR}/libespeak-ng-full.a"
+          "${CMAKE_CURRENT_BINARY_DIR}/libespeak-ng.a"
+  )
 else()
   target_link_libraries(espeak-ng PRIVATE ucd)
 endif()
@@ -130,5 +140,7 @@ target_link_libraries(espeak-ng PUBLIC espeak-include)
 if (MINGW)
   target_link_options(espeak-ng PRIVATE "-static-libstdc++" "-static")
 endif()
+
+
 
 install(TARGETS espeak-ng)
