@@ -106,26 +106,18 @@ get_filename_component( UCD_LIB_PATH ${UCD_DIR} ABSOLUTE)
 MESSAGE("UCD_LIB_PATH===${UCD_LIB_PATH}")
 
 if (NOT BUILD_SHARED_LIBS)
-  add_library(ucdlib STATIC IMPORTED)
-  set_target_properties(ucdlib PROPERTIES
-          IMPORTED_LOCATION "${UCD_LIB_PATH}/libucd.a"
+  # 解包 libucd.a，列出所有 .o
+  execute_process(
+          COMMAND ${CMAKE_AR} t ${UCD_LIB_PATH}/libucd.a
+          OUTPUT_VARIABLE ucd_list
   )
-  if(CMAKE_VERSION VERSION_LESS 3.24)
-    # 旧版本 CMake 的方式
-    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-      # GCC/Clang 语法
-      target_link_libraries(espeak-ng PRIVATE
-              -Wl,--whole-archive ${UCD_LIB_PATH}/libucd.a -Wl,--no-whole-archive)
-    elseif(MSVC)
-      # MSVC 语法
-      target_link_libraries(espeak-ng PRIVATE /WHOLEARCHIVE:ucdlib)
-    endif()
-  else()
-    # 现代 CMake 3.24+ 语法
-    target_link_libraries(espeak-ng PRIVATE
-            $<LINK_LIBRARY:WHOLE_ARCHIVE,ucdlib>
-            $<LINK_LIBRARY:RESOLVE_ONLY>)
-  endif()
+  string(REPLACE "\n" ";" ucd_list ${ucd_list})
+
+  add_library(ucd_objs OBJECT IMPORTED)
+  set_target_properties(ucd_objs PROPERTIES
+          IMPORTED_OBJECTS "${ucd_list}"
+  )
+  target_sources(espeak-ng PRIVATE $<TARGET_OBJECTS:ucd_objs>)
 else()
   target_link_libraries(espeak-ng PRIVATE ucd)
 endif()
