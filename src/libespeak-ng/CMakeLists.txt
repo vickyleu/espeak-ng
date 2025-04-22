@@ -100,24 +100,24 @@ if (HAVE_LIBPCAUDIO AND USE_LIBPCAUDIO)
   target_include_directories(espeak-ng PRIVATE ${PCAUDIO_INC})
 endif()
 
-target_link_libraries(espeak-ng PRIVATE espeak-ng-config ucd)
+target_link_libraries(espeak-ng PRIVATE espeak-ng-config )
 # 展开 ucd 的路径
 get_filename_component( UCD_LIB_PATH ${UCD_DIR} ABSOLUTE)
 MESSAGE("UCD_LIB_PATH===${UCD_LIB_PATH}")
 
 if (NOT BUILD_SHARED_LIBS)
   # 解包 libucd.a，列出所有 .o
-  execute_process(
-          COMMAND ${CMAKE_AR} t ${UCD_LIB_PATH}/libucd.a
-          OUTPUT_VARIABLE ucd_list
+  add_library(ucd STATIC IMPORTED GLOBAL)
+  set_target_properties(ucd PROPERTIES
+          IMPORTED_LOCATION "${UCD_LIB_PATH}/libucd.a"
   )
-  string(REPLACE "\n" ";" ucd_list ${ucd_list})
-
-  add_library(ucd_objs OBJECT IMPORTED)
-  set_target_properties(ucd_objs PROPERTIES
-          IMPORTED_OBJECTS "${ucd_list}"
+  # CMake ≥3.24 推荐：
+  target_link_libraries(espeak-ng PRIVATE
+          $<LINK_LIBRARY:WHOLE_ARCHIVE,ucd>
+          $<LINK_LIBRARY:NO_WHOLE_ARCHIVE>
   )
-  target_sources(espeak-ng PRIVATE $<TARGET_OBJECTS:ucd_objs>)
+elseif ()
+  target_link_libraries(espeak-ng PRIVATE ucd )
 endif ()
 
 if (NOT MSVC)
