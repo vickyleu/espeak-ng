@@ -107,25 +107,12 @@ get_filename_component( UCD_LIB_PATH ${UCD_DIR} ABSOLUTE)
 MESSAGE("UCD_LIB_PATH===${UCD_LIB_PATH}")
 
 if (NOT BUILD_SHARED_LIBS)
-  # 定义合并后的静态库路径
   set(MERGED_LIB "${CMAKE_CURRENT_BINARY_DIR}/libespeak-ng-full.a")
 
-  # 创建 MRI 脚本
-  set(BUNDLE_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/bundle.scr")
-  file(WRITE "${BUNDLE_SCRIPT}"
-          "CREATE ${MERGED_LIB}\n"
-          "ADDLIB $<TARGET_FILE:espeak-ng>\n"
-          "ADDLIB ${UCD_LIB_PATH}/libucd.a\n"
-          "SAVE\n"
-          "END\n"
-  )
-
-  # 定义合并目标
-  add_custom_target(merge_espeak_ng ALL
-          COMMAND ${CMAKE_AR} -M < "${BUNDLE_SCRIPT}"
-          COMMAND ${CMAKE_RANLIB} "${MERGED_LIB}"
-          COMMAND ${CMAKE_COMMAND} -E copy "${MERGED_LIB}" "$<TARGET_FILE:espeak-ng>"
-          DEPENDS espeak-ng
+  add_custom_command(TARGET espeak-ng POST_BUILD
+          COMMAND ${CMAKE_AR} crsT ${MERGED_LIB} $<TARGET_FILE:espeak-ng> ${UCD_LIB_PATH}/libucd.a
+          COMMAND ${CMAKE_RANLIB} ${MERGED_LIB}
+          COMMAND ${CMAKE_COMMAND} -E copy ${MERGED_LIB} $<TARGET_FILE:espeak-ng>
           COMMENT "合并 libucd.a 到 libespeak-ng.a 并重建索引"
   )
 else()
