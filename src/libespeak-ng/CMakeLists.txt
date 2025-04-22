@@ -107,7 +107,6 @@ MESSAGE("UCD_LIB_PATH===${UCD_LIB_PATH}")
 
 if (NOT BUILD_SHARED_LIBS)
   # 解包 libucd.a，列出所有 .o
-  add_library(ucd STATIC IMPORTED GLOBAL)
   set_target_properties(ucd PROPERTIES
           IMPORTED_LOCATION "${UCD_LIB_PATH}/libucd.a"
   )
