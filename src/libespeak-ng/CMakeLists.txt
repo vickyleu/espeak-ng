@@ -6,6 +6,7 @@ configure_file(config.h.in ${ESPEAK_CONFIG_H})
 add_library(espeak-ng-config INTERFACE)
 target_include_directories(espeak-ng-config INTERFACE ${ESPEAK_CONFIG_DIR})
 
+
 add_library(espeak-ng
   common.c
   mnemonics.c
@@ -106,26 +107,26 @@ get_filename_component( UCD_LIB_PATH ${UCD_DIR} ABSOLUTE)
 MESSAGE("UCD_LIB_PATH===${UCD_LIB_PATH}")
 
 if (NOT BUILD_SHARED_LIBS)
-  # espeak-ng 已经完成静态库 libespeak-ng.a 的生成
-  # 1. 生成 MRI 脚本
+  # 定义合并后的静态库路径
+  set(MERGED_LIB "${CMAKE_CURRENT_BINARY_DIR}/libespeak-ng-full.a")
+
+  # 创建 MRI 脚本
   set(BUNDLE_SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/bundle.scr")
   file(WRITE "${BUNDLE_SCRIPT}"
-          "CREATE libespeak-ng-full.a\n"
-          "ADDMOD libespeak-ng.a\n"
-          "ADDMOD ${UCD_LIB_PATH}/libucd.a\n"
+          "CREATE ${MERGED_LIB}\n"
+          "ADDLIB $<TARGET_FILE:espeak-ng>\n"
+          "ADDLIB ${UCD_LIB_PATH}/libucd.a\n"
           "SAVE\n"
           "END\n"
   )
-  # 2. 在 espeak-ng 静态库 build 完成后执行打包、ranlib 并替换
-  add_custom_command(TARGET espeak-ng
-          POST_BUILD
-          COMMAND ${CMAKE_RANLIB} "$<TARGET_FILE:espeak-ng>"
+
+  # 定义合并目标
+  add_custom_target(merge_espeak_ng ALL
           COMMAND ${CMAKE_AR} -M < "${BUNDLE_SCRIPT}"
-          COMMAND ${CMAKE_RANLIB} "${CMAKE_CURRENT_BINARY_DIR}/libespeak-ng-full.a"
-          COMMAND ${CMAKE_COMMAND} -E copy
-          "${CMAKE_CURRENT_BINARY_DIR}/libespeak-ng-full.a"
-          "${CMAKE_CURRENT_BINARY_DIR}/libespeak-ng.a"
-          COMMENT "合并 ucd 库、重建索引并替换为完整的 libespeak-ng.a"
+          COMMAND ${CMAKE_RANLIB} "${MERGED_LIB}"
+          COMMAND ${CMAKE_COMMAND} -E copy "${MERGED_LIB}" "$<TARGET_FILE:espeak-ng>"
+          DEPENDS espeak-ng
+          COMMENT "合并 libucd.a 到 libespeak-ng.a 并重建索引"
   )
 else()
   target_link_libraries(espeak-ng PRIVATE ucd)
