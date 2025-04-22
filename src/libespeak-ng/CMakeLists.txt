@@ -1,4 +1,5 @@
 set(ESPEAK_CONFIG_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
+set(UCD_DIR ${CMAKE_CURRENT_BINARY_DIR}/../ucd-tools)
 set(ESPEAK_CONFIG_H ${ESPEAK_CONFIG_DIR}/config.h)
 configure_file(config.h.in ${ESPEAK_CONFIG_H})
 
@@ -99,15 +100,16 @@ if (HAVE_LIBPCAUDIO AND USE_LIBPCAUDIO)
   target_include_directories(espeak-ng PRIVATE ${PCAUDIO_INC})
 endif()
 
-
-target_link_libraries(espeak-ng PRIVATE espeak-ng-config )
+target_link_libraries(espeak-ng PRIVATE espeak-ng-config ucd)
 
 if (NOT BUILD_SHARED_LIBS)
-  target_link_libraries(espeak-ng PRIVATE
-          -Wl,--whole-archive ucd -Wl,--no-whole-archive
+  add_library(ucd_objs OBJECT IMPORTED)
+  set_target_properties(ucd_objs PROPERTIES
+          IMPORTED_LOCATION "${UCD_LIB_PATH}/libucd.a"
   )
-endif()
-
+  # 把 ucd_objs 的 .o 并入 espeak-ng
+  target_sources(espeak-ng PRIVATE $<TARGET_OBJECTS:ucd_objs>)
+endif ()
 
 if (NOT MSVC)
   target_link_libraries(espeak-ng PRIVATE m)
@@ -116,10 +118,6 @@ target_link_libraries(espeak-ng PUBLIC espeak-include)
 
 if (MINGW)
   target_link_options(espeak-ng PRIVATE "-static-libstdc++" "-static")
-elseif ()
-  if (NOT BUILD_SHARED_LIBS)
-    target_link_options(espeak-ng PRIVATE "-static-libstdc++" "-static")
-  endif()
-endif ()
+endif()
 
 install(TARGETS espeak-ng)
