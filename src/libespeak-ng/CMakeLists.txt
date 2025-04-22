@@ -99,7 +99,16 @@ if (HAVE_LIBPCAUDIO AND USE_LIBPCAUDIO)
   target_include_directories(espeak-ng PRIVATE ${PCAUDIO_INC})
 endif()
 
-target_link_libraries(espeak-ng PRIVATE espeak-ng-config ucd)
+
+target_link_libraries(espeak-ng PRIVATE espeak-ng-config )
+
+if (NOT BUILD_SHARED_LIBS)
+  target_link_libraries(espeak-ng PRIVATE
+          -Wl,--whole-archive ucd -Wl,--no-whole-archive
+  )
+endif()
+
+
 if (NOT MSVC)
   target_link_libraries(espeak-ng PRIVATE m)
 endif()
@@ -107,6 +116,10 @@ target_link_libraries(espeak-ng PUBLIC espeak-include)
 
 if (MINGW)
   target_link_options(espeak-ng PRIVATE "-static-libstdc++" "-static")
-endif()
+elseif ()
+  if (NOT BUILD_SHARED_LIBS)
+    target_link_options(espeak-ng PRIVATE "-static-libstdc++" "-static")
+  endif()
+endif ()
 
 install(TARGETS espeak-ng)
