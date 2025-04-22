@@ -106,10 +106,10 @@ get_filename_component( UCD_LIB_PATH ${UCD_DIR} ABSOLUTE)
 MESSAGE("UCD_LIB_PATH===${UCD_LIB_PATH}")
 
 if (NOT BUILD_SHARED_LIBS)
-  set_target_properties(ucd PROPERTIES
+  add_library(ucdlib STATIC IMPORTED)
+  set_target_properties(ucdlib PROPERTIES
           IMPORTED_LOCATION "${UCD_LIB_PATH}/libucd.a"
   )
-
   if(CMAKE_VERSION VERSION_LESS 3.24)
     # 旧版本 CMake 的方式
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -118,12 +118,12 @@ if (NOT BUILD_SHARED_LIBS)
               -Wl,--whole-archive ${UCD_LIB_PATH}/libucd.a -Wl,--no-whole-archive)
     elseif(MSVC)
       # MSVC 语法
-      target_link_libraries(espeak-ng PRIVATE /WHOLEARCHIVE:ucd)
+      target_link_libraries(espeak-ng PRIVATE /WHOLEARCHIVE:ucdlib)
     endif()
   else()
     # 现代 CMake 3.24+ 语法
     target_link_libraries(espeak-ng PRIVATE
-            $<LINK_LIBRARY:WHOLE_ARCHIVE,ucd>
+            $<LINK_LIBRARY:WHOLE_ARCHIVE,ucdlib>
             $<LINK_LIBRARY:RESOLVE_ONLY>)
   endif()
 else()
