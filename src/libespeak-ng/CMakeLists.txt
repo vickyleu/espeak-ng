@@ -107,14 +107,38 @@ get_filename_component( UCD_LIB_PATH ${UCD_DIR} ABSOLUTE)
 MESSAGE("UCD_LIB_PATH===${UCD_LIB_PATH}")
 
 if (NOT BUILD_SHARED_LIBS)
+  # 定义合并后的库文件路径
   set(MERGED_LIB "${CMAKE_CURRENT_BINARY_DIR}/libespeak-ng-full.a")
 
-  add_custom_command(TARGET espeak-ng POST_BUILD
-          COMMAND ${CMAKE_AR} crsT ${MERGED_LIB} $<TARGET_FILE:espeak-ng> ${UCD_LIB_PATH}/libucd.a
-          COMMAND ${CMAKE_RANLIB} ${MERGED_LIB}
-          COMMAND ${CMAKE_COMMAND} -E copy ${MERGED_LIB} $<TARGET_FILE:espeak-ng>
-          COMMENT "合并 libucd.a 到 libespeak-ng.a 并重建索引"
+  # 确保 UCD_LIB_PATH 是有效的
+  if(NOT EXISTS "${UCD_LIB_PATH}/libucd.a")
+    message(FATAL_ERROR "libucd.a not found at ${UCD_LIB_PATH}/libucd.a")
+  endif()
+
+  # 添加一个自定义命令来合并库
+  add_custom_command(
+          OUTPUT ${MERGED_LIB}
+          COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/temp_obj
+          COMMAND cd ${CMAKE_CURRENT_BINARY_DIR}/temp_obj && ${CMAKE_AR} x $<TARGET_FILE:espeak-ng>
+          COMMAND cd ${CMAKE_CURRENT_BINARY_DIR}/temp_obj && ${CMAKE_AR} x ${UCD_LIB_PATH}/libucd.a
+          COMMAND ${CMAKE_AR} crs ${MERGED_LIB} ${CMAKE_CURRENT_BINARY_DIR}/temp_obj/*.o
+          COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_CURRENT_BINARY_DIR}/temp_obj
+          DEPENDS espeak-ng
+          COMMENT "Extracting and merging espeak-ng and ucd libraries"
   )
+
+  # 创建一个自定义目标来触发合并过程
+  add_custom_target(merged_espeak_ng ALL DEPENDS ${MERGED_LIB})
+
+  # 替换原始库文件或创建一个新的导入库
+  add_library(espeak-ng-full STATIC IMPORTED GLOBAL)
+  set_target_properties(espeak-ng-full PROPERTIES
+          IMPORTED_LOCATION ${MERGED_LIB}
+  )
+
+  # 使你的可执行文件链接到合并后的库
+  target_link_libraries(test_piper_phonemize PRIVATE espeak-ng-full)
+  target_link_libraries(piper_phonemize_exe PRIVATE espeak-ng-full)
 else()
   target_link_libraries(espeak-ng PRIVATE ucd)
 endif()
