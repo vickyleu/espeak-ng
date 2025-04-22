@@ -107,39 +107,28 @@ get_filename_component( UCD_LIB_PATH ${UCD_DIR} ABSOLUTE)
 MESSAGE("UCD_LIB_PATH===${UCD_LIB_PATH}")
 
 if (NOT BUILD_SHARED_LIBS)
-  # 不要直接检查文件是否存在，因为它可能是在构建过程中创建的
-  # 假设 ucd 是一个有效的目标或者会在后续过程中生成
-
-  # 首先，确保 espeak-ng 先正确链接 ucd 目标
-  target_link_libraries(espeak-ng PRIVATE ucd)
-
-  # 然后，我们可以在适当的位置添加合并库的步骤
-  # 假设我们知道 ucd 库会在哪里生成
-
-  # 创建一个变量来存储预期的 ucd 库位置
-  # 这可能需要根据您的构建系统进行调整
-  set(UCD_LIB_FILE "${UCD_LIB_PATH}/libucd.a")
-  set(ESPEAK_LIB_FILE "$<TARGET_FILE:espeak-ng>")
-  set(MERGED_LIB "${CMAKE_CURRENT_BINARY_DIR}/libespeak-ng-full.a")
-
-  # 添加一个自定义目标，该目标依赖于 espeak-ng 和 ucd
-  add_custom_target(merge_libraries ALL
-          DEPENDS espeak-ng ucd
+  # 添加后置构建命令，在 espeak-ng 库生成后执行
+  add_custom_command(TARGET espeak-ng POST_BUILD
           COMMAND ${CMAKE_COMMAND} -E echo "开始合并库..."
-          COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/temp_obj
-          COMMAND ${CMAKE_COMMAND} -E echo "解压 espeak-ng 库..."
-          COMMAND bash -c "cd ${CMAKE_CURRENT_BINARY_DIR}/temp_obj && ${CMAKE_AR} x ${ESPEAK_LIB_FILE}"
-          COMMAND ${CMAKE_COMMAND} -E echo "解压 ucd 库..."
-          COMMAND bash -c "cd ${CMAKE_CURRENT_BINARY_DIR}/temp_obj && ${CMAKE_AR} x ${UCD_LIB_FILE}"
-          COMMAND ${CMAKE_COMMAND} -E echo "创建合并库..."
-          COMMAND bash -c "cd ${CMAKE_CURRENT_BINARY_DIR}/temp_obj && ${CMAKE_AR} crs ${MERGED_LIB} *.o"
-          COMMAND ${CMAKE_RANLIB} ${MERGED_LIB}
-          COMMAND ${CMAKE_COMMAND} -E echo "替换原始库..."
-          COMMAND ${CMAKE_COMMAND} -E copy ${MERGED_LIB} ${ESPEAK_LIB_FILE}
-          COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_CURRENT_BINARY_DIR}/temp_obj
-          COMMENT "正在合并 espeak-ng 和 ucd 库"
-  )
+          COMMAND ${CMAKE_COMMAND} -E echo "espeak-ng 库位置: $<TARGET_FILE:espeak-ng>"
+          COMMAND ${CMAKE_COMMAND} -E echo "ucd 库位置: ${UCD_LIB_PATH}/libucd.a"
 
+          # 创建临时目录，解压两个库，然后合并
+          COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/temp_obj
+          COMMAND cd ${CMAKE_CURRENT_BINARY_DIR}/temp_obj && ${CMAKE_AR} x $<TARGET_FILE:espeak-ng>
+          COMMAND cd ${CMAKE_CURRENT_BINARY_DIR}/temp_obj && ${CMAKE_AR} x ${UCD_LIB_PATH}/libucd.a
+
+          # 创建新的合并库并替换原来的库
+          COMMAND cd ${CMAKE_CURRENT_BINARY_DIR}/temp_obj && ${CMAKE_AR} crs $<TARGET_FILE:espeak-ng>.new *.o
+          COMMAND ${CMAKE_RANLIB} $<TARGET_FILE:espeak-ng>.new
+          COMMAND ${CMAKE_COMMAND} -E rename $<TARGET_FILE:espeak-ng>.new $<TARGET_FILE:espeak-ng>
+
+          # 清理
+          COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_CURRENT_BINARY_DIR}/temp_obj
+
+          COMMENT "将 libucd.a 合并到 libespeak-ng.a"
+          VERBATIM
+  )
 else()
   target_link_libraries(espeak-ng PRIVATE ucd)
 endif()
