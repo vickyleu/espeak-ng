@@ -101,6 +101,9 @@ if (HAVE_LIBPCAUDIO AND USE_LIBPCAUDIO)
 endif()
 
 target_link_libraries(espeak-ng PRIVATE espeak-ng-config ucd)
+# 展开 ucd 的路径
+get_filename_component( UCD_LIB_PATH ${UCD_DIR} ABSOLUTE)
+MESSAGE("UCD_LIB_PATH===${UCD_LIB_PATH}")
 
 if (NOT BUILD_SHARED_LIBS)
   add_library(ucd_objs OBJECT IMPORTED)
