@@ -116,10 +116,10 @@ if (NOT BUILD_SHARED_LIBS)
           "SAVE\n"
           "END\n"
   )
-
   # 2. 在 espeak-ng 静态库 build 完成后执行打包、ranlib 并替换
   add_custom_command(TARGET espeak-ng
           POST_BUILD
+          COMMAND ${CMAKE_RANLIB} "$<TARGET_FILE:espeak-ng>"
           COMMAND ${CMAKE_AR} -M < "${BUNDLE_SCRIPT}"
           COMMAND ${CMAKE_RANLIB} "${CMAKE_CURRENT_BINARY_DIR}/libespeak-ng-full.a"
           COMMAND ${CMAKE_COMMAND} -E copy
