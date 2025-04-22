@@ -113,13 +113,17 @@ if (NOT BUILD_SHARED_LIBS)
           COMMAND ${CMAKE_COMMAND} -E echo "espeak-ng 库位置: $<TARGET_FILE:espeak-ng>"
           COMMAND ${CMAKE_COMMAND} -E echo "ucd 库位置: ${UCD_LIB_PATH}/libucd.a"
 
-          # 创建临时目录，解压两个库，然后合并
+          # 创建临时目录
           COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/temp_obj
-          COMMAND cd ${CMAKE_CURRENT_BINARY_DIR}/temp_obj && ${CMAKE_AR} x $<TARGET_FILE:espeak-ng>
-          COMMAND cd ${CMAKE_CURRENT_BINARY_DIR}/temp_obj && ${CMAKE_AR} x ${UCD_LIB_PATH}/libucd.a
 
-          # 创建新的合并库并替换原来的库
-          COMMAND cd ${CMAKE_CURRENT_BINARY_DIR}/temp_obj && ${CMAKE_AR} crs $<TARGET_FILE:espeak-ng>.new *.o
+          # 解压库文件并检查
+          COMMAND cd ${CMAKE_CURRENT_BINARY_DIR}/temp_obj && ${CMAKE_AR} x $<TARGET_FILE:espeak-ng>
+          COMMAND ls -la ${CMAKE_CURRENT_BINARY_DIR}/temp_obj
+          COMMAND cd ${CMAKE_CURRENT_BINARY_DIR}/temp_obj && ${CMAKE_AR} x ${UCD_LIB_PATH}/libucd.a
+          COMMAND ls -la ${CMAKE_CURRENT_BINARY_DIR}/temp_obj
+
+          # 使用具体文件名代替通配符
+          COMMAND cd ${CMAKE_CURRENT_BINARY_DIR}/temp_obj && ${CMAKE_AR} crs $<TARGET_FILE:espeak-ng>.new `find . -name "*.o"`
           COMMAND ${CMAKE_RANLIB} $<TARGET_FILE:espeak-ng>.new
           COMMAND ${CMAKE_COMMAND} -E rename $<TARGET_FILE:espeak-ng>.new $<TARGET_FILE:espeak-ng>
 
